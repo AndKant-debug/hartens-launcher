@@ -52,7 +52,7 @@ public class MainActivity extends Activity {
 
     // Подстроки названий, которые закрепляются автоматически при первом запуске
     private static final String[] AUTO_PIN = {
-            "wink", "vk видео", "vk video", "вк видео", "youtube", "smarttube",
+            "wink", "vk видео", "vk video", "вк видео", "youtube", "smarttube", "twitch",
             "v2ray", "v2raytun", "happ", "hiddify", "nekobox"
     };
     // Пакеты VPN-клиентов для кнопки «VPN»
@@ -63,7 +63,7 @@ public class MainActivity extends Activity {
     private static final String PREFS = "launcher";
     private static final String KEY_FAVS = "favs";
     private static final String KEY_HIDDEN = "hidden";
-    private static final String KEY_INIT = "init";
+    private static final String KEY_INIT = "init2";
 
     private SharedPreferences prefs;
     private final List<App> allApps = new ArrayList<>();
