@@ -1,0 +1,33 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.hartens.fastlauncher'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.hartens.fastlauncher"
+        minSdk 26
+        targetSdk 30
+        versionCode 1
+        versionName "1.0"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            // Личное использование: подписываем debug-ключом, чтобы APK сразу ставился через adb
+            signingConfig signingConfigs.debug
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+// Никаких внешних библиотек: лаунчер использует только системный Android SDK.
+dependencies {
+}
