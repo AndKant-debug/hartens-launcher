@@ -52,18 +52,19 @@ public class MainActivity extends Activity {
 
     // Подстроки названий, которые закрепляются автоматически при первом запуске
     private static final String[] AUTO_PIN = {
-            "wink", "vk видео", "vk video", "вк видео", "youtube", "smarttube", "twitch",
-            "v2ray", "v2raytun", "happ", "hiddify", "nekobox"
+            "youtube", "smarttube", "zetflix", "lampa", "wink",
+            "vk видео", "vk video", "вк видео", "twitch", "happ"
     };
     // Пакеты VPN-клиентов для кнопки «VPN»
     private static final String[] VPN_PACKAGES = {
-            "com.v2ray.ang", "com.v2raytun.android", "com.happproxy", "app.hiddify.com", "moe.nb4a"
+            "com.happproxy", "su.happ.proxyutility", "su.happ.proxyutility.tv",
+            "com.v2ray.ang", "com.v2raytun.android", "app.hiddify.com"
     };
 
     private static final String PREFS = "launcher";
     private static final String KEY_FAVS = "favs";
     private static final String KEY_HIDDEN = "hidden";
-    private static final String KEY_INIT = "init2";
+    private static final String KEY_INIT = "init3";
 
     private SharedPreferences prefs;
     private final List<App> allApps = new ArrayList<>();
@@ -443,8 +444,14 @@ public class MainActivity extends Activity {
                 }
             }
         }
+        for (App a : allApps) {
+            if (a.label.toLowerCase(Locale.getDefault()).contains("happ")) {
+                launch(a);
+                return;
+            }
+        }
         // клиент не найден — открываем системные настройки VPN
-        Toast.makeText(this, "VPN-клиент не найден (нужен v2rayNG). Открываю настройки VPN.", Toast.LENGTH_LONG).show();
+        Toast.makeText(this, "VPN-клиент не найден (установите Happ). Открываю настройки VPN.", Toast.LENGTH_LONG).show();
         openSettingsAction(Settings.ACTION_VPN_SETTINGS);
     }
 
@@ -512,7 +519,8 @@ public class MainActivity extends Activity {
                 "Сеть / Wi‑Fi",
                 "Системные настройки VPN",
                 showHidden ? "Не показывать скрытые приложения" : "Показать скрытые приложения",
-                "Сбросить избранное"
+                "Сбросить избранное",
+                "Скрыть всё, кроме избранного"
         };
         new AlertDialog.Builder(this)
                 .setTitle("Меню")
@@ -535,6 +543,18 @@ public class MainActivity extends Activity {
                             prefs.edit().putBoolean(KEY_INIT, false).putString(KEY_FAVS, "").apply();
                             autoPinOnce();
                             refreshViews();
+                            break;
+                        case 5:
+                            List<String> keep = getFavs();
+                            Set<String> hide = getHidden();
+                            for (App x : allApps) {
+                                if (!keep.contains(x.pkg)) hide.add(x.pkg);
+                            }
+                            prefs.edit().putStringSet(KEY_HIDDEN, hide).apply();
+                            refreshViews();
+                            Toast.makeText(MainActivity.this,
+                                    "Скрыто. Вернуть: Меню → Показать скрытые приложения",
+                                    Toast.LENGTH_LONG).show();
                             break;
                     }
                 })
