@@ -326,7 +326,7 @@ public class MainActivity extends Activity {
                 if (b != null) {
                     bg = new LayerDrawable(new Drawable[]{
                             new BitmapDrawable(getResources(), b),
-                            new ColorDrawable(0x99000000)});
+                            new ColorDrawable(0x40000000)});
                 }
             } catch (Throwable ignored) {
             }
