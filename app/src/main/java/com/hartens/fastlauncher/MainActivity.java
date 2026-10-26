@@ -7,10 +7,14 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.LayerDrawable;
 import android.graphics.drawable.StateListDrawable;
 import android.net.Uri;
 import android.os.Bundle;
@@ -28,6 +32,7 @@ import android.widget.TextClock;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -65,6 +70,15 @@ public class MainActivity extends Activity {
     private static final String KEY_FAVS = "favs";
     private static final String KEY_HIDDEN = "hidden";
     private static final String KEY_INIT = "init3";
+
+    private static final String[] THEME_NAMES = {"Графит", "Океан", "Закат", "Аврора", "Свой фон"};
+    private static final int[][] THEME_COLORS = {
+            {0xFF0F1115, 0xFF1B2230},
+            {0xFF06141F, 0xFF0B3C5D},
+            {0xFF1A0B2E, 0xFF4A1A5E, 0xFF8A2F4F},
+            {0xFF04140F, 0xFF0E5A4B, 0xFF1B2A6B}
+    };
+    private LinearLayout rootView;
 
     private SharedPreferences prefs;
     private final List<App> allApps = new ArrayList<>();
@@ -114,6 +128,7 @@ public class MainActivity extends Activity {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(dp(48), dp(24), dp(48), dp(16));
+        rootView = root;
 
         // верхняя панель: часы + кнопки
         LinearLayout top = new LinearLayout(this);
@@ -198,6 +213,7 @@ public class MainActivity extends Activity {
                 ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
 
         setContentView(root);
+        applyTheme();
     }
 
     private Drawable focusDrawable() {
@@ -287,6 +303,49 @@ public class MainActivity extends Activity {
         }
     }
 
+    // ---------- фон ----------
+
+    private File customBg() {
+        return new File(getExternalFilesDir(null), "background.jpg");
+    }
+
+    private void applyTheme() {
+        int t = prefs.getInt("theme", 1);
+        Drawable bg = null;
+        if (t == 4 && customBg().exists()) {
+            try {
+                String path = customBg().getAbsolutePath();
+                BitmapFactory.Options o = new BitmapFactory.Options();
+                o.inJustDecodeBounds = true;
+                BitmapFactory.decodeFile(path, o);
+                int sample = 1;
+                while (o.outWidth / (sample * 2) >= 1920) sample *= 2;
+                o = new BitmapFactory.Options();
+                o.inSampleSize = sample;
+                Bitmap b = BitmapFactory.decodeFile(path, o);
+                if (b != null) {
+                    bg = new LayerDrawable(new Drawable[]{
+                            new BitmapDrawable(getResources(), b),
+                            new ColorDrawable(0x99000000)});
+                }
+            } catch (Throwable ignored) {
+            }
+        }
+        if (bg == null) {
+            if (t > 3 || t < 0) t = 1;
+            bg = new GradientDrawable(GradientDrawable.Orientation.TL_BR, THEME_COLORS[t]);
+        }
+        rootView.setBackground(bg);
+    }
+
+    private void nextTheme() {
+        int t = prefs.getInt("theme", 1) + 1;
+        if (t == 4 && !customBg().exists()) t = 0;
+        if (t > 4) t = 0;
+        prefs.edit().putInt("theme", t).apply();
+        applyTheme();
+    }
+
     // ---------- данные ----------
 
     private void loadApps() {
@@ -360,17 +419,19 @@ public class MainActivity extends Activity {
     }
 
     private void autoPinOnce() {
-        if (prefs.getBoolean(KEY_INIT, false) || allApps.isEmpty()) return;
+        if (allApps.isEmpty()) return;
         List<String> favs = getFavs();
+        Set<String> done = new HashSet<>(prefs.getStringSet("autopinned", new HashSet<String>()));
         for (String key : AUTO_PIN) {
             for (App a : allApps) {
-                if (a.label.toLowerCase(Locale.getDefault()).contains(key) && !favs.contains(a.pkg)) {
-                    favs.add(a.pkg);
+                if (a.label.toLowerCase(Locale.getDefault()).contains(key) && !done.contains(a.pkg)) {
+                    if (!favs.contains(a.pkg)) favs.add(a.pkg);
+                    done.add(a.pkg);
                 }
             }
         }
         saveFavs(favs);
-        prefs.edit().putBoolean(KEY_INIT, true).apply();
+        prefs.edit().putStringSet("autopinned", done).apply();
     }
 
     private App find(String pkg) {
@@ -520,7 +581,8 @@ public class MainActivity extends Activity {
                 "Системные настройки VPN",
                 showHidden ? "Не показывать скрытые приложения" : "Показать скрытые приложения",
                 "Сбросить избранное",
-                "Скрыть всё, кроме избранного"
+                "Скрыть всё, кроме избранного",
+                "Сменить фон (сейчас: " + THEME_NAMES[Math.min(4, prefs.getInt("theme", 1))] + ")"
         };
         new AlertDialog.Builder(this)
                 .setTitle("Меню")
@@ -540,7 +602,7 @@ public class MainActivity extends Activity {
                             refreshViews();
                             break;
                         case 4:
-                            prefs.edit().putBoolean(KEY_INIT, false).putString(KEY_FAVS, "").apply();
+                            prefs.edit().remove("autopinned").putString(KEY_FAVS, "").apply();
                             autoPinOnce();
                             refreshViews();
                             break;
@@ -555,6 +617,9 @@ public class MainActivity extends Activity {
                             Toast.makeText(MainActivity.this,
                                     "Скрыто. Вернуть: Меню → Показать скрытые приложения",
                                     Toast.LENGTH_LONG).show();
+                            break;
+                        case 6:
+                            nextTheme();
                             break;
                     }
                 })
